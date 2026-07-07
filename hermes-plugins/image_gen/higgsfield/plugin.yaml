@@ -1,0 +1,6 @@
+name: higgsfield
+version: 0.1.0
+description: "Higgsfield CLI backend — Veo 3.1, Kling v3.0, Seedance 2.0, FLUX.2, Soul V2, Nano Banana Pro, and 30+ other image/video/3D/audio models. Shells out to the official `higgsfield` CLI binary (higgsfield-ai/cli v1.1.8+). Auth via `higgsfield auth login` on the host."
+author: theWAVE.is
+kind: backend
+requires_env: []
