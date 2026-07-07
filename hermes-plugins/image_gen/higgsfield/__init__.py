@@ -390,9 +390,16 @@ class HiggsfieldImageGenProvider(ImageGenProvider):
         meta = _MODELS.get(model_id, {})
         is_slow = model_id in SLOW_MODELS
 
-        # Aspect-ratio forwarding: the CLI accepts freeform W:H. We just
-        # pass resolve_aspect_ratio's output as-is.
-        aspect_flag = aspect
+        # Aspect-ratio forwarding: the CLI accepts freeform W:H. The
+        # resolve_aspect_ratio() helper from agent.image_gen_provider returns
+        # the abstract enum name ("landscape" / "square" / "portrait"),
+        # so we map it to the actual W:H token via ASPECT_RATIOS. If a
+        # caller passes a custom ratio like "21:9" directly, fall through
+        # and pass it as-is (the CLI accepts any freeform W:H).
+        if aspect in ASPECT_RATIOS:
+            aspect_flag = ASPECT_RATIOS[aspect]
+        else:
+            aspect_flag = aspect  # already a W:H token or unknown — let the CLI decide
 
         # Build the CLI command
         bin_path: str
