@@ -257,9 +257,16 @@ def _run(cmd: List[str], timeout: int = 900) -> Dict[str, Any]:
     if not out:
         return {}
     try:
-        return json.loads(out)
+        parsed = json.loads(out)
     except json.JSONDecodeError:
         return {"_raw": out}
+    # The CLI sometimes returns a list (e.g. an error message as ["Error: ..."]).
+    # Normalize to a dict so callers can use .get() uniformly.
+    if isinstance(parsed, list):
+        return {"_list_response": parsed}
+    if not isinstance(parsed, dict):
+        return {"_raw": parsed}
+    return parsed
 
 
 def _extract_result_url(payload: Dict[str, Any]) -> Optional[str]:
@@ -481,6 +488,37 @@ class HiggsfieldImageGenProvider(ImageGenProvider):
             return error_response(
                 error=f"Higgsfield CLI timed out after {'15m' if is_slow else '3m'} — try wait=False and poll manually",
                 error_type="timeout",
+                provider=self.name,
+                model=model_id,
+                prompt=prompt,
+                aspect_ratio=aspect,
+            )
+
+        # Defensive: the CLI sometimes returns a list (e.g. error response) or
+        # a wrapped error dict. Surface a clean error_response instead of letting
+        # a list-vs-dict AttributeError bubble up to the agent.
+        if "_list_response" in payload:
+            items = payload["_list_response"]
+            first_str = next(
+                (str(x) for x in items if isinstance(x, (str, int, float))),
+                "",
+            )
+            return error_response(
+                error=(
+                    f"Higgsfield CLI returned a list (unexpected): {first_str or items[:3]}"
+                ),
+                error_type="malformed_response",
+                provider=self.name,
+                model=model_id,
+                prompt=prompt,
+                aspect_ratio=aspect,
+            )
+        if "_raw" in payload and not any(
+            k in payload for k in ("id", "job_id", "jobId", "status", "results", "outputs")
+        ):
+            return error_response(
+                error=f"Higgsfield CLI returned non-JSON output: {str(payload['_raw'])[:200]}",
+                error_type="malformed_response",
                 provider=self.name,
                 model=model_id,
                 prompt=prompt,
