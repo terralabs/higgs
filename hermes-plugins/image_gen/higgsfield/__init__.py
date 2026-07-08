@@ -499,20 +499,34 @@ class HiggsfieldImageGenProvider(ImageGenProvider):
         # a list-vs-dict AttributeError bubble up to the agent.
         if "_list_response" in payload:
             items = payload["_list_response"]
-            first_str = next(
-                (str(x) for x in items if isinstance(x, (str, int, float))),
-                "",
-            )
-            return error_response(
-                error=(
-                    f"Higgsfield CLI returned a list (unexpected): {first_str or items[:3]}"
-                ),
-                error_type="malformed_response",
-                provider=self.name,
-                model=model_id,
-                prompt=prompt,
-                aspect_ratio=aspect,
-            )
+            # Common case: CLI wraps the job in a single-element list, e.g.
+            #   [{ "id": "...", "result_url": "...", "status": "completed", ... }]
+            # Unwrap that and treat the inner dict as the actual payload so
+            # the rest of generate() works unchanged.
+            if (
+                isinstance(items, list)
+                and len(items) == 1
+                and isinstance(items[0], dict)
+            ):
+                logger.debug("Higgsfield returned a single-element list, unwrapping")
+                payload = items[0]
+            else:
+                # Real error list (strings, numbers, or multi-element).
+                # Surface a clean error.
+                first_str = next(
+                    (str(x) for x in items if isinstance(x, (str, int, float))),
+                    "",
+                )
+                return error_response(
+                    error=(
+                        f"Higgsfield CLI returned a list (unexpected): {first_str or items[:3]}"
+                    ),
+                    error_type="malformed_response",
+                    provider=self.name,
+                    model=model_id,
+                    prompt=prompt,
+                    aspect_ratio=aspect,
+                )
         if "_raw" in payload and not any(
             k in payload for k in ("id", "job_id", "jobId", "status", "results", "outputs")
         ):
