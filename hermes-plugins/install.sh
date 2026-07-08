@@ -20,7 +20,7 @@ ls -la "$DEST"
 echo
 echo "Verifying SHA-256..."
 EXPECTED_YAML="2f8f318e9e10349874ba29bf72f4b81ec29a50365ff3fae63e0fdcdadf4ff6bc"
-EXPECTED_INIT="83a3deaf45f5a247b43d23266027af3f23cb1d8f4e54e9591b2f05885081a70e"
+EXPECTED_INIT="a3288169b523a4bac7bcec05f6119119ffe33675dd0401b200fefef457f0fa8e"
 ACTUAL_YAML=$(shasum -a 256 "$DEST/plugin.yaml" | awk '{print $1}')
 ACTUAL_INIT=$(shasum -a 256 "$DEST/__init__.py" | awk '{print $1}')
 if [ "$ACTUAL_YAML" = "$EXPECTED_YAML" ] && [ "$ACTUAL_INIT" = "$EXPECTED_INIT" ]; then
